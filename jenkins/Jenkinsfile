@@ -1,0 +1,15 @@
+pipeline {
+  agent any
+  stages {
+    stage('Build') {
+      steps {
+        sh 'echo Building Spring Boot Application...'
+      }
+    }
+    stage('Deploy') {
+      steps {
+        sh 'echo Deploying to Kubernetes...'
+      }
+    }
+  }
+}
