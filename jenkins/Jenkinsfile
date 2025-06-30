@@ -1,15 +1,59 @@
 pipeline {
-  agent any
-  stages {
-    stage('Build') {
-      steps {
-        sh 'echo Building Spring Boot Application...'
-      }
+    agent any
+
+    environment {
+        DOCKER_HUB_USERNAME = "dockeruserari"
+        DOCKER_HUB_PASSWORD = "dckr_pat_3oqq0uAlOkx1X-k6z9dIPV5tdKE"
+
+        IMAGE_BACKEND  = "dockeruserari/library-backend"
+        IMAGE_FRONTEND = "dockeruserari/library-frontend"
+        IMAGE_DB       = "dockeruserari/library-db"
+        IMAGE_NGINX    = "dockeruserari/library-nginx"
     }
-    stage('Deploy') {
-      steps {
-        sh 'echo Deploying to Kubernetes...'
-      }
+
+    stages {
+        stage('Build Spring Boot App') {
+            steps {
+                echo "🔧 Building Java App..."
+                dir('backend') {
+                    sh 'mvn clean package -DskipTests'
+                }
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                echo "🐳 Building Docker Images..."
+                sh """
+                    echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+
+                    docker build -t $IMAGE_BACKEND backend/
+                    docker build -t $IMAGE_FRONTEND frontend/
+                    docker build -t $IMAGE_DB db/
+                    docker build -t $IMAGE_NGINX nginx/
+
+                    docker push $IMAGE_BACKEND
+                    docker push $IMAGE_FRONTEND
+                    docker push $IMAGE_DB
+                    docker push $IMAGE_NGINX
+                """
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo "🚀 Deploying to Kubernetes..."
+                sh 'kubectl apply -f k8s/'
+            }
+        }
     }
-  }
+
+    post {
+        success {
+            echo "✅ Deployment Successful!"
+        }
+        failure {
+            echo "❌ Deployment Failed!"
+        }
+    }
 }
